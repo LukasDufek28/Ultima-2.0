@@ -1,0 +1,79 @@
+📝 Logging live run to D:\RAVBOTGITHUB\ULTIMA2.0\Ultima-2.0\logs\live_run_20251001_165947.txt (retaining last 30 logs)
+📊 No existing performance file found, starting fresh tracking
+
+====================================================================
+🔁 Scan #1 | Local 2025-10-01 16:59:47 | UTC 14:59:47
+💼 Account snapshot -> Balance: 240.45 | Equity: 217.66 | Free Margin: 145.90 | Margin Used: 71.76 | Open PnL: -22.79
+📂 Open positions -> EURUSD+: 1 pos (buy 0.06, sell 0.00, net +0.06, pnl -6.13) | GBPJPY+: 2 pos (buy 0.00, sell 0.08, net -0.08, pnl -8.44) | GBPUSD+: 3 pos (buy 0.00, sell 0.18, net -0.18, pnl -8.22)
+
+🌍 Active trading session: London-NY Overlap
+Checking signals at 2025-10-01 16:59:47
+🛡️ Risk guard disabled: no daily/weekly drawdown limits enforced this cycle.
+📊 EURUSD+: Trading allowed (session priority 5/3 for London-NY Overlap)
+EURUSD+ computed ATR(5) = 0.000770
+EURUSD+ Volatility pressure: 0.73 | Candle conviction: 0.50
+📊 EURUSD+ Market Regime: RANGING
+📈 EURUSD+ Open positions: BUY 0.06@1.17581→1.17461 PnL -6.13
+ℹ️ EURUSD+ Breakout: No actionable signal (raw=None) | regime weight 10.0% | performance 1.00× | adj priority 30.0
+ℹ️ EURUSD+ Donchian Channel: No actionable signal (raw=None) | regime weight 25.0% | performance 1.00× | adj priority 16.0
+ℹ️ EURUSD+ MA Crossover: No actionable signal (raw=None) | regime weight 15.0% | performance 1.00× | adj priority 13.3
+ℹ️ EURUSD+ Momentum Trend: No actionable signal (raw=None) | regime weight 10.0% | performance 1.00× | adj priority 50.0
+ℹ️ EURUSD+ Mean Reversion: No actionable signal (raw=None) | regime weight 40.0% | performance 1.00× | adj priority 2.5
+📊 USDJPY+: Trading allowed (session priority 4/3 for London-NY Overlap)
+USDJPY+ computed ATR(5) = 0.097200
+USDJPY+ Volatility pressure: 0.81 | Candle conviction: 0.50
+📊 USDJPY+ Market Regime: TRENDING
+📈 USDJPY+: no open positions
+ℹ️ USDJPY+ Breakout: No actionable signal (raw=None) | regime weight 25.0% | performance 1.00× | adj priority 12.0
+ℹ️ USDJPY+ Donchian Channel: No actionable signal (raw=None) | regime weight 5.0% | performance 1.00× | adj priority 80.0
+ℹ️ USDJPY+ MA Crossover: No actionable signal (raw=None) | regime weight 35.0% | performance 1.00× | adj priority 5.7
+✅ USDJPY+ Momentum Trend: Signal sell confirmed by MTF (H1 bias: bearish)
+🎯 USDJPY+ Momentum Trend: Micro momentum aligned -0.02% ≤ -0.03% (soft confirm)
+USDJPY+ Momentum Trend Final Signal: sell (regime: 30.0%, performance: 1.00×, adj priority: 16.7, confidence 0.76, risk base x1.09 → x1.00, ATR(5)=0.097200, micro -0.02%/-0.03% (soft))
+🔍 USDJPY+ Mean Reversion: Signal buy rejected by MTF filter (H1 bias: bearish)
+USDJPY+: executing SELL via Momentum Trend (priority 16.666666666666668, confidence 0.76) | comment MTS17
+Current account equity: $217.66 (balance: $240.45)
+🎯 USDJPY+: base lot 0.17 using risk multiplier 1.00
+🔗 USDJPY+: Blocking trade - 2 same-direction positions in JPY_PAIRS (limit 2).
+🔗 USDJPY+: Blocking trade - 3 same-direction positions in USD_MAJORS (limit 3).
+🚫 USDJPY+: Trade blocked due to correlation limits
+📊 GBPUSD+: Trading allowed (session priority 5/3 for London-NY Overlap)
+GBPUSD+ computed ATR(5) = 0.000910
+GBPUSD+ Volatility pressure: 0.90 | Candle conviction: 0.50
+📊 GBPUSD+ Market Regime: RANGING
+📈 GBPUSD+ Open positions: SELL 0.06@1.35030→1.35059 PnL -1.48 | SELL 0.06@1.35010→1.35059 PnL -2.50 | SELL 0.06@1.34976→1.35059 PnL -4.24
+ℹ️ GBPUSD+ Breakout: No actionable signal (raw=None) | regime weight 10.0% | performance 1.00× | adj priority 30.0
+ℹ️ GBPUSD+ Donchian Channel: No actionable signal (raw=None) | regime weight 25.0% | performance 1.00× | adj priority 16.0
+ℹ️ GBPUSD+ MA Crossover: No actionable signal (raw=None) | regime weight 15.0% | performance 1.00× | adj priority 13.3
+✅ GBPUSD+ Momentum Trend: Signal buy confirmed by MTF (H1 bias: bullish)
+🎯 GBPUSD+ Momentum Trend: Micro momentum aligned +0.03% ≥ 0.03% (soft confirm)
+GBPUSD+ Momentum Trend Final Signal: buy (regime: 10.0%, performance: 1.00×, adj priority: 50.0, confidence 0.68, risk base x1.11 → x1.00, ATR(5)=0.000910, micro +0.03%/0.03% (soft))
+ℹ️ GBPUSD+ Mean Reversion: No actionable signal (raw=None) | regime weight 40.0% | performance 1.00× | adj priority 2.5
+GBPUSD+: skipping Momentum Trend buy (priority 50.0) because opposite position is open
+📊 GBPJPY+: Trading allowed (session priority 4/3 for London-NY Overlap)
+GBPJPY+ computed ATR(5) = 0.111800
+GBPJPY+ Volatility pressure: 0.90 | Candle conviction: 0.50
+📊 GBPJPY+ Market Regime: TRENDING
+📈 GBPJPY+ Open positions: SELL 0.04@198.16800→198.36200 PnL -4.50 | SELL 0.04@198.19200→198.36200 PnL -3.94
+ℹ️ GBPJPY+ Breakout: No actionable signal (raw=None) | regime weight 25.0% | performance 1.00× | adj priority 12.0
+ℹ️ GBPJPY+ Donchian Channel: No actionable signal (raw=None) | regime weight 5.0% | performance 1.00× | adj priority 80.0
+ℹ️ GBPJPY+ MA Crossover: No actionable signal (raw=None) | regime weight 35.0% | performance 1.00× | adj priority 5.7
+ℹ️ GBPJPY+ Momentum Trend: No actionable signal (raw=None) | regime weight 30.0% | performance 1.00× | adj priority 16.7
+ℹ️ GBPJPY+ Mean Reversion: No actionable signal (raw=None) | regime weight 5.0% | performance 1.00× | adj priority 20.0
+📊 XAUUSD+: Trading allowed (session priority 5/3 for London-NY Overlap)
+XAUUSD+ computed ATR(5) = 4.270000
+XAUUSD+ Volatility pressure: 0.72 | Candle conviction: 0.50
+📊 XAUUSD+ Market Regime: TRENDING
+📈 XAUUSD+: no open positions
+ℹ️ XAUUSD+ Breakout: No actionable signal (raw=None) | regime weight 25.0% | performance 1.00× | adj priority 12.0
+ℹ️ XAUUSD+ Donchian Channel: No actionable signal (raw=None) | regime weight 5.0% | performance 1.00× | adj priority 80.0
+ℹ️ XAUUSD+ MA Crossover: No actionable signal (raw=None) | regime weight 35.0% | performance 1.00× | adj priority 5.7
+ℹ️ XAUUSD+ Momentum Trend: No actionable signal (raw=None) | regime weight 30.0% | performance 1.00× | adj priority 16.7
+ℹ️ XAUUSD+ Mean Reversion: No actionable signal (raw=None) | regime weight 5.0% | performance 1.00× | adj priority 20.0
+📒 Scan #1 summary -> symbols processed 5/5 | open-symbols 3 | candidates 2 | executed 1 | pyramids 0 | confidence-filtered 0 | micro-filtered 0 | position-blocked 1 | duplicates 0 | guard-blocked 0
+📊 Strategy diagnostics -> disabled 0 | no-signal 22 | ATR-missing 0 | micro-overrides 0 | micro-confirms 2
+⏱️ Next scan in 120 seconds...
+Traceback (most recent call last):
+  File "d:\RAVBOTGITHUB\ULTIMA2.0\Ultima-2.0\live\demo_mt5.py", line 2525, in <module>
+    time.sleep(SCAN_INTERVAL_SECONDS)
+KeyboardInterrupt

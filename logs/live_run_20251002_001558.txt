@@ -1,0 +1,60 @@
+📝 Logging live run to D:\RAVBOTGITHUB\ULTIMA2.0\Ultima-2.0\logs\live_run_20251002_001558.txt (retaining last 30 logs)
+📊 No existing performance file found, starting fresh tracking
+
+====================================================================
+🔁 Scan #1 | Local 2025-10-02 00:15:58 | UTC 22:15:58
+💼 Account snapshot -> Balance: 256.12 | Equity: 252.42 | Free Margin: 190.70 | Margin Used: 61.72 | Open PnL: -3.70
+📂 Open positions -> GBPJPY+: 1 pos (buy 0.19, sell 0.00, net +0.19, pnl 1.87) | GBPUSD+: 1 pos (buy 0.05, sell 0.00, net +0.05, pnl -2.68) | XAUUSD+: 1 pos (buy 0.00, sell 0.01, net -0.01, pnl -3.30)
+🎯 Symbols in scope this cycle -> EURUSD+, USDJPY+, GBPUSD+, GBPJPY+, XAUUSD+
+
+🌍 Active trading session: Sydney/Tokyo
+Checking signals at 2025-10-02 00:15:58
+🛡️ Risk guard disabled: no daily/weekly drawdown limits enforced this cycle.
+🧮 Guard factors -> risk 1.00, soft 1.00, combined 1.00
+📊 EURUSD+: Skipping (session priority 2/3 for Sydney/Tokyo)
+📊 USDJPY+: Trading allowed (session priority 5/3 for Sydney/Tokyo)
+USDJPY+ computed ATR(5) = 0.068800
+USDJPY+ Volatility pressure: 0.65 | Candle conviction: 0.50
+📉 USDJPY+ Spread snapshot -> 0.0 pts (0.000000) | Spread/ATR 0.00
+📊 USDJPY+ Market Regime: TRENDING
+📈 USDJPY+: no open positions
+ℹ️ USDJPY+ Breakout: No actionable signal (raw=None) | regime weight 25.0% | performance 1.00× | adj priority 12.0
+ℹ️ USDJPY+ Donchian Channel: No actionable signal (raw=None) | regime weight 5.0% | performance 1.00× | adj priority 80.0
+ℹ️ USDJPY+ MA Crossover: No actionable signal (raw=None) | regime weight 35.0% | performance 1.00× | adj priority 5.7
+ℹ️ USDJPY+ Momentum Trend: No actionable signal (raw=None) | regime weight 30.0% | performance 1.00× | adj priority 16.7
+ℹ️ USDJPY+ Mean Reversion: No actionable signal (raw=None) | regime weight 5.0% | performance 1.00× | adj priority 20.0
+📊 GBPUSD+: Skipping (session priority 1/3 for Sydney/Tokyo)
+📊 GBPJPY+: Trading allowed (session priority 4/3 for Sydney/Tokyo)
+GBPJPY+ computed ATR(5) = 0.083400
+GBPJPY+ Volatility pressure: 0.77 | Candle conviction: 0.50
+📉 GBPJPY+ Spread snapshot -> 0.0 pts (0.000000) | Spread/ATR 0.00
+📊 GBPJPY+ Market Regime: RANGING
+📈 GBPJPY+ Open positions: BUY 0.19@198.20800→198.22500 PnL +1.87
+ℹ️ GBPJPY+ Breakout: No actionable signal (raw=None) | regime weight 10.0% | performance 1.00× | adj priority 30.0
+ℹ️ GBPJPY+ Donchian Channel: No actionable signal (raw=None) | regime weight 25.0% | performance 1.00× | adj priority 16.0
+ℹ️ GBPJPY+ MA Crossover: No actionable signal (raw=None) | regime weight 15.0% | performance 1.00× | adj priority 13.3
+ℹ️ GBPJPY+ Momentum Trend: No actionable signal (raw=None) | regime weight 10.0% | performance 1.00× | adj priority 50.0
+✅ GBPJPY+ Mean Reversion: Signal sell confirmed by MTF (H1 bias: neutral)
+🎯 GBPJPY+ Mean Reversion: Micro momentum counter-trend (+0.06% vs required -0.02%); allowing fade entry in range.
+GBPJPY+ Mean Reversion Final Signal: sell (regime: 40.0%, performance: 1.00×, adj priority: 2.5, confidence 0.75, risk base x1.13 → x1.00, ATR(5)=0.083400)
+GBPJPY+: skipping Mean Reversion sell (priority 2.5) because opposite position is open
+📊 XAUUSD+: Trading allowed (session priority 3/3 for Sydney/Tokyo)
+XAUUSD+ computed ATR(5) = 5.762000
+XAUUSD+ Volatility pressure: 0.88 | Candle conviction: 0.78
+📉 XAUUSD+ Spread snapshot -> 7.0 pts (0.070000) | Spread/ATR 0.01
+📊 XAUUSD+ Market Regime: TRENDING
+📈 XAUUSD+ Open positions: SELL 0.01@3859.52000→3863.39000 PnL -3.30
+ℹ️ XAUUSD+ Breakout: No actionable signal (raw=None) | regime weight 25.0% | performance 1.00× | adj priority 12.0
+ℹ️ XAUUSD+ Donchian Channel: No actionable signal (raw=None) | regime weight 5.0% | performance 1.00× | adj priority 80.0
+ℹ️ XAUUSD+ MA Crossover: No actionable signal (raw=None) | regime weight 35.0% | performance 1.00× | adj priority 5.7
+ℹ️ XAUUSD+ Momentum Trend: No actionable signal (raw=None) | regime weight 30.0% | performance 1.00× | adj priority 16.7
+ℹ️ XAUUSD+ Mean Reversion: No actionable signal (raw=None) | regime weight 5.0% | performance 1.00× | adj priority 20.0
+📒 Scan #1 summary -> symbols processed 5/5 | open-symbols 2 | candidates 1 | executed 0 | pyramids 0 | confidence-filtered 0 | micro-filtered 0 | position-blocked 1 | duplicates 0 | guard-blocked 0 | counter-exits 0
+🛠️ Stop management -> breakeven 0 | trailing 0 | partials 0 | partial-missed 0 | adjustment-fails 0
+📊 Strategy diagnostics -> disabled 0 | no-signal 14 | ATR-missing 0 | micro-overrides 1 | micro-confirms 0
+⏱️ Next scan in 60 seconds...
+
+🛑 Manual stop requested — wrapping up after scan #1.
+💼 Final account snapshot -> Balance: 256.12 | Equity: 252.09 | Free Margin: 190.37 | Margin Used: 61.72 | Open PnL: -4.03
+📈 Final run performance -> Equity Δ -0.33 (-0.13%) | Balance Δ +0.00
+📂 Final open positions -> GBPJPY+: 1 pos (buy 0.19, sell 0.00, net +0.19, pnl 1.54) | GBPUSD+: 1 pos (buy 0.05, sell 0.00, net +0.05, pnl -2.73) | XAUUSD+: 1 pos (buy 0.00, sell 0.01, net -0.01, pnl -3.25)
