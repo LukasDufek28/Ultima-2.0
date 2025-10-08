@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from agents import MeanReversionAgent, MACrossoverAgent, MomentumTrendAgent, BreakoutAgent, DonchianChannelAgent
 from agents import create_agent, is_within_agent_window
 from gui import launch_gui
-from bestconfig_loader import load_bestconfig, get_params_for, available_symbols, available_strategies
+from bestconfig_loader import load_bestconfig, get_params_for, available_symbols, available_strategies, find_bestconfig
 import time
 import os
 import numpy as np
@@ -411,6 +411,14 @@ def main():
 
 if __name__ == "__main__":
     if USE_GUI:
-        launch_gui()
+        # Preload bestconfig and pass into GUI so it auto-imports at startup
+        best_path = find_bestconfig()
+        cfg = load_bestconfig(best_path) if best_path else {}
+        if best_path:
+            print(f"Loaded bestconfig from: {best_path}")
+            print(f"Symbols: {available_symbols(cfg)}")
+        else:
+            print("No bestconfig.json found; GUI will start with defaults.")
+        launch_gui(preloaded_cfg=cfg)
     else:
         main()

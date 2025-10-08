@@ -416,8 +416,14 @@ def timeframe_code_to_str(tf_code: int) -> str:
     return mapping.get(int(tf_code), 'M15')
 
 
-def launch_gui():
-    cfg = load_bestconfig()
+def launch_gui(preloaded_cfg: dict | None = None):
+    """Launch live GUI.
+
+    If preloaded_cfg is provided it will be used instead of loading from disk.
+    This allows the caller (main script) to control when/where bestconfig is loaded
+    and report path or validation errors earlier.
+    """
+    cfg = preloaded_cfg if isinstance(preloaded_cfg, dict) else load_bestconfig()
     symbols_list = available_symbols(cfg) or ["XAUUSD"]
 
     root = tk.Tk()
@@ -585,12 +591,6 @@ def launch_gui():
 
     for sym in symbols_list:
         build_symbol_tab(sym)
-    # Initial sync from cfg
-    for sym in symbols_list:
-        try:
-            sync_symbol_from_cfg(sym, cfg)
-        except Exception:
-            pass
 
     def sync_symbol_from_cfg(symbol, cfg_snapshot):
         if symbol not in ui:
@@ -598,7 +598,7 @@ def launch_gui():
         sv = ui[symbol]
         sym_cfg = (cfg_snapshot.get('symbols', {}).get(symbol, {}) or {})
         sym_meta = sym_cfg.get('_meta', {}) if isinstance(sym_cfg, dict) else {}
-        dhtf = (sym_meta.get('htf_filter', {}) or {})
+        dhtf = (sym_meta.get('htf_filter', {}) or {}) 
 
         # active: keep as-is (user control)
         # timeframe from symbol meta
@@ -663,6 +663,14 @@ def launch_gui():
             d['atr_sl'].set(str(float(atr.get('sl_mult', d['atr_sl'].get() or 1.5))))
             d['atr_tp'].set(str(float(atr.get('tp_mult', d['atr_tp'].get() or 2.5))))
             d['atr_pr'].set(str(atr.get('priority', d['atr_pr'].get() or 'SL')))
+        log(f"Finished sync for {symbol} (lots={sv['lots'].get()} tf={sv['tf_str'].get()} htf={'on' if sv['htf_enabled'].get() else 'off'})")
+
+    # Perform initial sync after definition to ensure function exists
+    for sym in symbols_list:
+        try:
+            sync_symbol_from_cfg(sym, cfg)
+        except Exception as e:
+            log(f"Sync error for {sym}: {e}")
 
     def get_state_snapshot():
         state = {'symbols': {}}
@@ -726,7 +734,6 @@ def launch_gui():
             log("Reload: bestconfig.json not found or invalid")
             return
         cfg = new_cfg
-        # Update existing symbols and create new tabs if needed
         new_symbols = available_symbols(cfg) or []
         if not new_symbols:
             log("Reloaded bestconfig.json (no symbols)")
