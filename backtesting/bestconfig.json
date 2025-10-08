@@ -1,10 +1,26 @@
 {
   "symbols": {
     "XAUUSD": {
-      "ma_crossover": {
+      "_meta": {
         "timeframe": "30M",
         "timeframe_code": 30,
         "days": 300,
+        "risk": {
+          "lots": 0.01
+        },
+        "trading_window": {
+          "trade_24_7": false,
+          "start_hour": 8,
+          "end_hour": 18
+        },
+        "htf_filter": {
+          "enabled": true,
+          "timeframe": "D1",
+          "timeframe_code": 16408,
+          "ma_period": 100
+        }
+      },
+      "ma_crossover": {
         "strategy_params": {
           "fast": 5,
           "slow": 200
@@ -15,53 +31,10 @@
           "tp_mult": 5.0,
           "priority": "SL"
         },
-        "risk": {
-          "lots": 0.01
-        },
-        "trading_window": {
-          "trade_24_7": false,
-          "start_hour": 8,
-          "end_hour": 18
-        },
-        "htf_filter": {
-          "enabled": true,
-          "timeframe": "D1",
-          "timeframe_code": 16408,
-          "ma_period": 50
-        },
-        "performance": {
-          "trades": 188,
-          "win_rate": 39.361702127659576,
-          "total_profit": 878.560714285712,
-          "final_balance": 1878.560714285712,
-          "max_drawdown": 113.98285714285748,
-          "max_drawdown_pct": 6.064597679220448,
-          "profit_factor": 1.583851606845671,
-          "avg_trade": 4.673195288753788,
-          "expectancy": 4.673195288753788,
-          "trade_sharpe": 2.6525352552543864
-        },
-        "updated_at": "2025-09-30 23:23:25",
-        "optimized": {
-          "strategy_params": {
-            "fast": 5,
-            "slow": 200
-          },
-          "atr": {
-            "period": 14,
-            "sl_mult": 2.0,
-            "tp_mult": 5.0,
-            "priority": "SL"
-          },
-          "objective": "highest_total_profit",
-          "score": 973.9242857142845
-        },
-        "active": true
+        "active": true,
+        "updated_at": "2025-10-08 23:24:36"
       },
       "momentum_trend": {
-        "timeframe": "30M",
-        "timeframe_code": 30,
-        "days": 300,
         "strategy_params": {
           "ma_period": 50,
           "roc_period": 10
@@ -72,53 +45,10 @@
           "tp_mult": 5.0,
           "priority": "SL"
         },
-        "risk": {
-          "lots": 0.01
-        },
-        "trading_window": {
-          "trade_24_7": false,
-          "start_hour": 8,
-          "end_hour": 18
-        },
-        "htf_filter": {
-          "enabled": true,
-          "timeframe": "D1",
-          "timeframe_code": 16408,
-          "ma_period": 50
-        },
-        "performance": {
-          "trades": 318,
-          "win_rate": 41.82389937106918,
-          "total_profit": 1019.5464285714302,
-          "final_balance": 2019.5464285714302,
-          "max_drawdown": 157.55285714285765,
-          "max_drawdown_pct": 7.681990782614105,
-          "profit_factor": 1.6556936125956538,
-          "avg_trade": 3.206120844564246,
-          "expectancy": 3.206120844564246,
-          "trade_sharpe": 3.227479278335263
-        },
-        "updated_at": "2025-09-30 23:23:25",
-        "optimized": {
-          "strategy_params": {
-            "ma_period": 50,
-            "roc_period": 10
-          },
-          "atr": {
-            "period": 14,
-            "sl_mult": 2.0,
-            "tp_mult": 5.0,
-            "priority": "SL"
-          },
-          "objective": "highest_total_profit",
-          "score": 1203.8907142857156
-        },
-        "active": true
+        "active": true,
+        "updated_at": "2025-10-08 23:24:36"
       },
       "breakout": {
-        "timeframe": "30M",
-        "timeframe_code": 30,
-        "days": 300,
         "strategy_params": {
           "lookback": 100
         },
@@ -128,55 +58,13 @@
           "tp_mult": 5.0,
           "priority": "SL"
         },
-        "risk": {
-          "lots": 0.01
-        },
-        "trading_window": {
-          "trade_24_7": false,
-          "start_hour": 8,
-          "end_hour": 18
-        },
-        "htf_filter": {
-          "enabled": true,
-          "timeframe": "D1",
-          "timeframe_code": 16408,
-          "ma_period": 50
-        },
-        "performance": {
-          "trades": 71,
-          "win_rate": 46.478873239436616,
-          "total_profit": 560.6857142857152,
-          "final_balance": 1560.6857142857152,
-          "max_drawdown": 44.83857142857141,
-          "max_drawdown_pct": 2.8467901391332715,
-          "profit_factor": 2.2903522759028836,
-          "avg_trade": 7.896981891348101,
-          "expectancy": 7.896981891348101,
-          "trade_sharpe": 2.953924229853454
-        },
-        "updated_at": "2025-09-30 23:23:25",
-        "optimized": {
-          "strategy_params": {
-            "lookback": 100
-          },
-          "atr": {
-            "period": 14,
-            "sl_mult": 2.0,
-            "tp_mult": 5.0,
-            "priority": "SL"
-          },
-          "objective": "highest_total_profit",
-          "score": 705.8635714285724
-        },
-        "active": true
+        "active": true,
+        "updated_at": "2025-10-08 23:24:36"
       },
       "donchian_channel": {
-        "timeframe": "30M",
-        "timeframe_code": 30,
-        "days": 300,
         "strategy_params": {
           "channel_length": 100,
-          "exit_length": 10,
+          "exit_length": 100,
           "confirm_bars": 2,
           "atr_buffer_mult": 0.5,
           "atr_period": 14
@@ -187,168 +75,103 @@
           "tp_mult": 5.0,
           "priority": "SL"
         },
-        "risk": {
-          "lots": 0.01
-        },
-        "trading_window": {
-          "trade_24_7": false,
-          "start_hour": 8,
-          "end_hour": 18
-        },
-        "htf_filter": {
-          "enabled": true,
-          "timeframe": "D1",
-          "timeframe_code": 16408,
-          "ma_period": 50
-        },
-        "performance": {
-          "trades": 218,
-          "win_rate": 37.61467889908257,
-          "total_profit": 549.7499999999977,
-          "final_balance": 1549.7499999999977,
-          "max_drawdown": 137.52142857142871,
-          "max_drawdown_pct": 8.844382418361864,
-          "profit_factor": 1.4359042613443265,
-          "avg_trade": 2.5217889908256774,
-          "expectancy": 2.5217889908256774,
-          "trade_sharpe": 2.0541207971715756
-        },
-        "updated_at": "2025-09-30 23:23:25",
-        "optimized": {
-          "strategy_params": {
-            "channel_length": 100
-          },
-          "atr": {
-            "period": 14,
-            "sl_mult": 2.0,
-            "tp_mult": 5.0,
-            "priority": "SL"
-          },
-          "objective": "highest_total_profit",
-          "score": 705.8635714285724
-        },
-        "active": true
-      },
-      "mean_reversion": {
+        "active": true,
+        "updated_at": "2025-10-08 23:24:36"
+      }
+    },
+    "EURUSD": {
+      "_meta": {
         "timeframe": "30M",
         "timeframe_code": 30,
         "days": 300,
-        "strategy_params": {
-          "ma_period": 50,
-          "num_std": 2
-        },
-        "atr": {
-          "period": 7,
-          "sl_mult": 1.0,
-          "tp_mult": 1.0,
-          "priority": "SL"
-        },
-        "risk": {
-          "lots": 0.01
-        },
-        "trading_window": {
-          "trade_24_7": false,
-          "start_hour": 8,
-          "end_hour": 18
-        },
-        "htf_filter": {
-          "enabled": true,
-          "timeframe": "D1",
-          "timeframe_code": 16408,
-          "ma_period": 50
-        },
-        "performance": {
-          "trades": 158,
-          "win_rate": 52.53164556962025,
-          "total_profit": 130.5271428571441,
-          "final_balance": 1130.527142857144,
-          "max_drawdown": 61.77857142857056,
-          "max_drawdown_pct": 5.352627298956131,
-          "profit_factor": 1.2589376553373737,
-          "avg_trade": 0.8261211573236968,
-          "expectancy": 0.8261211573236968,
-          "trade_sharpe": 1.2851822884498025
-        },
-        "updated_at": "2025-09-30 22:54:08"
-      }
-    },
-    "GBPJPY": {
-      "mean_reversion": {
-        "timeframe": "30M",
-        "timeframe_code": 30,
-        "days": 30,
-        "strategy_params": {
-          "ma_period": 50,
-          "num_std": 2
-        },
-        "atr": {
-          "period": 10,
-          "sl_mult": 3.0,
-          "tp_mult": 2.0,
-          "priority": "SL"
-        },
         "risk": {
           "lots": 0.1
         },
         "trading_window": {
-          "trade_24_7": false,
-          "start_hour": 8,
-          "end_hour": 18
+          "trade_24_7": true,
+          "start_hour": 7,
+          "end_hour": 15
         },
         "htf_filter": {
           "enabled": true,
           "timeframe": "D1",
           "timeframe_code": 16408,
-          "ma_period": 50
+          "ma_period": 100
+        }
+      },
+      "ma_crossover": {
+        "strategy_params": {
+          "fast": 80,
+          "slow": 100
+        },
+        "atr": {
+          "period": 14,
+          "sl_mult": 2.0,
+          "tp_mult": 5.0,
+          "priority": "SL"
         },
         "active": true,
-        "performance": {
-          "trades": 22,
-          "win_rate": 77.27272727272727,
-          "total_profit": 30.398718260728703,
-          "final_balance": 1030.398718260729,
-          "max_drawdown": 3.3949866147479497,
-          "max_drawdown_pct": 0.32842440647194593,
-          "profit_factor": 4.2643920145190854,
-          "avg_trade": 1.3817599209422138,
-          "expectancy": 1.3817599209422138,
-          "trade_sharpe": 3.1806930146166232
+        "updated_at": "2025-10-08 23:19:53"
+      },
+      "mean_reversion": {
+        "strategy_params": {
+          "ma_period": 10,
+          "num_std": 1
         },
-        "optimized": {
-          "strategy_params": {
-            "ma_period": 50,
-            "num_std": 2
-          },
-          "atr": {
-            "period": 10,
-            "sl_mult": 3.0,
-            "tp_mult": 2.0,
-            "priority": "SL"
-          },
-          "objective": "highest_trade_sharpe",
-          "score": 3.2333165162706403
+        "atr": {
+          "period": 14,
+          "sl_mult": 2.0,
+          "tp_mult": 5.0,
+          "priority": "SL"
         },
-        "updated_at": "2025-10-01 00:01:14"
+        "active": true,
+        "updated_at": "2025-10-08 23:19:53"
+      },
+      "momentum_trend": {
+        "strategy_params": {
+          "ma_period": 20,
+          "roc_period": 50
+        },
+        "atr": {
+          "period": 14,
+          "sl_mult": 2.0,
+          "tp_mult": 5.0,
+          "priority": "SL"
+        },
+        "active": true,
+        "updated_at": "2025-10-08 23:19:53"
+      },
+      "breakout": {
+        "strategy_params": {
+          "lookback": 100
+        },
+        "atr": {
+          "period": 14,
+          "sl_mult": 2.0,
+          "tp_mult": 5.0,
+          "priority": "SL"
+        },
+        "active": false,
+        "updated_at": "2025-10-08 23:19:53"
+      },
+      "donchian_channel": {
+        "strategy_params": {
+          "channel_length": 100,
+          "exit_length": 100,
+          "confirm_bars": 2,
+          "atr_buffer_mult": 0.5,
+          "atr_period": 14
+        },
+        "atr": {
+          "period": 14,
+          "sl_mult": 2.0,
+          "tp_mult": 5.0,
+          "priority": "SL"
+        },
+        "active": false,
+        "updated_at": "2025-10-08 23:19:53"
       }
     }
   },
-  "updated_at": "2025-10-01 00:01:14",
-  "defaults": {
-    "timeframe": "30M",
-    "timeframe_code": 30,
-    "days": 30,
-    "active_strategies": {
-      "ma_crossover": false,
-      "mean_reversion": true,
-      "momentum_trend": false,
-      "breakout": false,
-      "donchian_channel": false
-    },
-    "htf_filter": {
-      "enabled": true,
-      "timeframe": "D1",
-      "timeframe_code": 16408,
-      "ma_period": 50
-    }
-  }
+  "updated_at": "2025-10-08 23:24:36"
 }

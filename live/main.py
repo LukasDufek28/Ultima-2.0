@@ -29,10 +29,14 @@ RESPECT_STOPS_LEVEL = True  # Enforce broker minimal stop distance if provided
 USE_GUI = True
 
 def build_agents_from_bestconfig():
+    """Construct live agents using the new symbol-level _meta schema.
+
+    Returns (agents_by_symbol, meta) where meta contains per-symbol timeframe & bars
+    plus original cfg for downstream use.
+    """
     cfg = load_bestconfig()
-    agent_dict = {}
+    agent_dict: dict[str, list] = {}
     symbol_list = available_symbols(cfg) or symbols
-    # Map strategy keys to a deterministic magic base (ensures unique magic per symbol+strategy)
     strategy_magic_base = {
         'ma_crossover': 101,
         'mean_reversion': 102,
@@ -40,39 +44,69 @@ def build_agents_from_bestconfig():
         'breakout': 104,
         'donchian_channel': 105,
     }
-    meta = {
-        'timeframe': timeframe,
-        'bars': bars,
-        'strategy_magic_base': strategy_magic_base,
-        'cfg': cfg,
-    }
+
+    # Helper: approximate minutes per bar for lookback estimation
+    def minutes_per_bar(tf_code: int) -> int:
+        mapping = {
+            mt5.TIMEFRAME_M1: 1,
+            mt5.TIMEFRAME_M5: 5,
+            mt5.TIMEFRAME_M15: 15,
+            mt5.TIMEFRAME_M30: 30,
+            mt5.TIMEFRAME_H1: 60,
+            mt5.TIMEFRAME_H4: 240,
+            mt5.TIMEFRAME_D1: 1440,
+        }
+        return mapping.get(int(tf_code), 15)
+
+    symbol_timeframes: dict[str, int] = {}
+    symbol_bars: dict[str, int] = {}
+    symbol_htf_filter: dict[str, dict] = {}
 
     for symbol in symbol_list:
-        # Determine strategies to run for this symbol: only those present and marked active in bestconfig
-        strat_keys = []
+        sym_node = (cfg.get('symbols', {}) or {}).get(symbol, {}) or {}
+        sym_meta = sym_node.get('_meta', {}) if isinstance(sym_node, dict) else {}
+        tf_code = sym_meta.get('timeframe_code') or sym_meta.get('timeframe') or timeframe
+        try:
+            tf_code = int(tf_code)
+        except Exception:
+            tf_code = timeframe
+        symbol_timeframes[symbol] = tf_code
+        # Days -> bars approximation (guard against missing meta)
+        days_val = sym_meta.get('days', 5)
+        try:
+            days_val = int(days_val)
+        except Exception:
+            days_val = 5
+        bars_guess = max(200, int((days_val * 24 * 60) / max(1, minutes_per_bar(tf_code))))
+        symbol_bars[symbol] = bars_guess
+        # Symbol-level HTF filter
+        symbol_htf_filter[symbol] = sym_meta.get('htf_filter', {}) or {}
+
+        # Determine active strategies
+        strat_keys: list[str] = []
         for s in available_strategies(cfg, symbol):
             entry = get_params_for(cfg, symbol, s)
             if entry and bool(entry.get('active', True)):
                 strat_keys.append(s)
-        entries = []
+        entries: list = []
         for strat in strat_keys:
             params_entry = get_params_for(cfg, symbol, strat)
             if not params_entry:
-                # Skip strategies not explicitly present in bestconfig for this symbol
                 continue
             agent = create_agent(strat, params_entry.get('strategy_params', {}))
             if not agent:
                 continue
-            # Attach helpful meta to agent instance
             agent._symbol = symbol
             agent._strategy_key = strat
             agent._lots = float(params_entry.get('risk', {}).get('lots', 0.1))
             agent._atr_cfg = params_entry.get('atr', {})
-            # Attach trading window from bestconfig (align with backtesting)
-            tw = params_entry.get('trading_window', {}) or {}
+            # Trading window from symbol meta first then strategy
+            tw = sym_meta.get('trading_window') or params_entry.get('trading_window', {}) or {}
             agent._trade_24_7 = bool(tw.get('trade_24_7', True))
             agent._trade_start_hour = int(tw.get('start_hour', 0))
             agent._trade_end_hour = int(tw.get('end_hour', 24))
+            # Store own timeframe for clarity
+            agent._timeframe_code = tf_code
             # Unique magic per symbol+strategy
             base = strategy_magic_base.get(strat, 999)
             agent._magic = (base * 100000) + abs(hash(symbol) % 99999)
@@ -80,30 +114,13 @@ def build_agents_from_bestconfig():
         if entries:
             agent_dict[symbol] = entries
 
-    # Timeframe override if provided in cfg.defaults
-    try:
-        tf_code = int((cfg or {}).get('defaults', {}).get('timeframe_code', timeframe))
-        meta['timeframe'] = tf_code
-    except Exception:
-        meta['timeframe'] = timeframe
-    # Bars lookback based on cfg.defaults.days and timeframe granularity (approx)
-    try:
-        days = int((cfg or {}).get('defaults', {}).get('days', 5))
-        # rough bars: minutes per bar
-        m15 = 15
-        bars_guess = max(200, int((days * 24 * 60) / m15))
-        meta['bars'] = bars_guess
-    except Exception:
-        meta['bars'] = bars
-
-    # HTF defaults for live bias (from cfg.defaults.htf_filter)
-    dhtf = (cfg or {}).get('defaults', {}).get('htf_filter', {}) or {}
-    meta['htf_filter'] = {
-        'enabled': bool(dhtf.get('enabled', False)),
-        'timeframe_code': int(dhtf.get('timeframe_code', mt5.TIMEFRAME_H1)),
-        'ma_period': int(dhtf.get('ma_period', 50)),
+    meta = {
+        'strategy_magic_base': strategy_magic_base,
+        'cfg': cfg,
+        'symbol_timeframes': symbol_timeframes,
+        'symbol_bars': symbol_bars,
+        'symbol_htf_filter': symbol_htf_filter,
     }
-
     return agent_dict, meta
 
 def compute_atr(df: pd.DataFrame, period: int = ATR_PERIOD):
@@ -255,8 +272,6 @@ def main():
     # Build from bestconfig first
     agent_dict, meta = build_agents_from_bestconfig()
     syms = list(agent_dict.keys()) or symbols
-    tf = meta.get('timeframe', timeframe)
-    lookback_bars = meta.get('bars', bars)
 
     try:
         print("Initializing MT5 (headless)...")
@@ -273,12 +288,16 @@ def main():
                     continue
                 if not info.visible:
                     mt5.symbol_select(symbol, True)
-
-                # Time range based on lookback bars and timeframe granularity
-                # For M15, minutes=lookback_bars*15; we assume M15 for now
+                # Per-symbol timeframe & lookback
+                tf_code = (meta.get('symbol_timeframes', {}) or {}).get(symbol, timeframe)
+                lookback_bars = (meta.get('symbol_bars', {}) or {}).get(symbol, bars)
+                # Map timeframe code to minutes (simple approximation)
+                def _mpb(code):
+                    m = {mt5.TIMEFRAME_M1:1, mt5.TIMEFRAME_M5:5, mt5.TIMEFRAME_M15:15, mt5.TIMEFRAME_M30:30, mt5.TIMEFRAME_H1:60, mt5.TIMEFRAME_H4:240, mt5.TIMEFRAME_D1:1440}
+                    return m.get(int(code), 15)
                 today = datetime.now()
-                from_date = today - timedelta(minutes=lookback_bars * 15)
-                rates = mt5.copy_rates_range(symbol, tf, from_date, today)
+                from_date = today - timedelta(minutes=lookback_bars * _mpb(tf_code))
+                rates = mt5.copy_rates_range(symbol, tf_code, from_date, today)
                 if rates is None:
                     print(f"No data for {symbol}")
                     continue
@@ -292,8 +311,9 @@ def main():
                 # Compute HTF bias for this symbol once per loop (if enabled globally or in any agent)
                 cfg = meta.get('cfg', {})
                 sym_cfg = (cfg or {}).get('symbols', {}).get(symbol, {}) or {}
-                # Decide HTF settings: per symbol+strategy if present, otherwise defaults
-                htf_meta = meta.get('htf_filter', {}) or {}
+                sym_meta = sym_cfg.get('_meta', {}) if isinstance(sym_cfg, dict) else {}
+                # Symbol-level HTF filter settings
+                htf_meta = (meta.get('symbol_htf_filter', {}) or {}).get(symbol, {}) or {}
                 htf_enabled_global = bool(htf_meta.get('enabled', False))
                 # Compute bias if any agent needs it
                 def compute_bias(htf_code: int, ma_p: int):
@@ -327,12 +347,13 @@ def main():
                         continue
                     # Determine HTF for this agent (from symbol+strategy config or defaults)
                     entry = sym_cfg.get(strategy_name, {})
-                    htf_cfg = entry.get('htf_filter', {}) or {}
+                    # Strategy-level override else symbol meta
+                    htf_cfg = entry.get('htf_filter') or htf_meta or {}
                     htf_enabled = bool(htf_cfg.get('enabled', htf_enabled_global))
                     bias_series = None
                     if htf_enabled:
-                        htf_code = int(htf_cfg.get('timeframe_code', htf_meta.get('timeframe_code', mt5.TIMEFRAME_H1)))
-                        ma_p = int(htf_cfg.get('ma_period', htf_meta.get('ma_period', 50)))
+                        htf_code = int(htf_cfg.get('timeframe_code', sym_meta.get('htf_filter', {}).get('timeframe_code', mt5.TIMEFRAME_H1)))
+                        ma_p = int(htf_cfg.get('ma_period', sym_meta.get('htf_filter', {}).get('ma_period', 50)))
                         key = (htf_code, ma_p)
                         if key not in bias_cache:
                             bias_cache[key] = compute_bias(htf_code, ma_p)

@@ -609,6 +609,10 @@ def gui_main():
         """
         Persist a bestconfig.json with per-symbol, per-strategy effective parameters and recent performance.
         Uses optimized combos if available; otherwise falls back to current GUI inputs.
+        SCHEMA CHANGE (2025-10-08): Common fields (timeframe, timeframe_code, days, risk.lots,
+        trading_window, htf_filter) are now stored ONCE per symbol instead of inside each
+        strategy object to reduce duplication. For backward compatibility, loader will
+        merge symbol-level fields into strategy views.
         """
         snapshot = last_results.get('value') or {}
         if not snapshot:
@@ -720,108 +724,75 @@ def gui_main():
         syms = list(snapshot.keys()) if snapshot else collect_symbols()
         now_ts = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         for symbol in syms:
+            # Ensure symbol container; embed symbol-level meta under special key '_meta'
             bestcfg['symbols'].setdefault(symbol, {})
+            sym_node = bestcfg['symbols'][symbol]
 
-            # For each strategy present in results (or enabled)
-            present_strats = list((snapshot.get(symbol) or {}).keys()) if snapshot else [k for k, v in strat_vars.items() if v.get()]
-            for strat_key in present_strats:
-                entry = bestcfg['symbols'][symbol].get(strat_key, {})
-
-                # Current inputs (effective)
-                entry['timeframe'] = str(tf_input)
-                entry['timeframe_code'] = tf_code
-                entry['days'] = int(days_used)
-                entry['strategy_params'] = strat_params_for(strat_key)
-                entry['atr'] = effective_atr_for(strat_key)
-                entry['risk'] = {'lots': trade_settings['lots']}
-                entry['trading_window'] = {
+            # Build/overwrite meta
+            # HTF filter (shared) derivation
+            try:
+                htf_enabled = bool((load_last_params() or {}).get('htf_filter', {}).get('enabled', False))
+            except Exception:
+                htf_enabled = False
+            htf_tf_input = htf_tf_var.get() if 'htf_tf_var' in locals() else 'H1'
+            try:
+                htf_code = int(parse_timeframe_input(htf_tf_input))
+            except Exception:
+                htf_code = int(parse_timeframe_input('H1'))
+            try:
+                htf_ma_p = parse_int(htf_ma_var.get(), 50)
+            except Exception:
+                htf_ma_p = 50
+            sym_meta = {
+                'timeframe': str(tf_input),
+                'timeframe_code': tf_code,
+                'days': int(days_used),
+                'risk': {'lots': trade_settings['lots']},
+                'trading_window': {
                     'trade_24_7': trade_settings['trade_24_7'],
                     'start_hour': trade_settings['start_hour'],
                     'end_hour': trade_settings['end_hour']
-                }
-                # NEW: include HTF filter settings
-                try:
-                    htf_enabled = bool((load_last_params() or {}).get('htf_filter', {}).get('enabled', False))
-                except Exception:
-                    htf_enabled = False
-                # Pull current GUI htf settings
-                htf_tf_input = htf_tf_var.get() if 'htf_tf_var' in locals() else 'H1'
-                try:
-                    htf_code = int(parse_timeframe_input(htf_tf_input))
-                except Exception:
-                    htf_code = int(parse_timeframe_input('H1'))
-                try:
-                    htf_ma_p = parse_int(htf_ma_var.get(), 50)
-                except Exception:
-                    htf_ma_p = 50
-                entry['htf_filter'] = {
+                },
+                'htf_filter': {
                     'enabled': bool(use_htf.get()) if 'use_htf' in locals() else htf_enabled,
                     'timeframe': str(htf_tf_input),
                     'timeframe_code': int(htf_code),
                     'ma_period': int(htf_ma_p)
                 }
+            }
+            sym_node['_meta'] = sym_meta
 
-                # Mark strategy as active (used in backtest/save)
-                # Strategy activation flag: live will only run strategies with active=True
+            # Determine strategies to save
+            present_strats = list((snapshot.get(symbol) or {}).keys()) if snapshot else [k for k, v in strat_vars.items() if v.get()]
+            for strat_key in present_strats:
+                strat_entry = sym_node.get(strat_key, {})
+                strat_entry['strategy_params'] = strat_params_for(strat_key)
+                strat_entry['atr'] = effective_atr_for(strat_key)
+                # Active flag
                 try:
-                    # Prefer GUI selection state if available
                     is_active = bool((strat_vars.get(strat_key).get())) if (isinstance(strat_vars, dict) and strat_key in strat_vars) else True
                 except Exception:
-                    # Fallback: if the strategy is present in current results, treat as active
                     is_active = True
-                entry['active'] = bool(is_active)
+                strat_entry['active'] = bool(is_active)
+                # Performance & optimized intentionally omitted from persisted config per user request.
+                # Remove if legacy keys already exist.
+                strat_entry.pop('performance', None)
+                strat_entry.pop('optimized', None)
+                strat_entry['updated_at'] = now_ts
+                # Remove duplicated symbol-level fields if exist from previous schema
+                for dup_key in ['timeframe','timeframe_code','days','risk','trading_window','htf_filter']:
+                    if dup_key in strat_entry:
+                        strat_entry.pop(dup_key, None)
+                sym_node[strat_key] = strat_entry
 
-                # Attach latest performance metrics if available
-                perf = None
-                try:
-                    if snapshot and symbol in snapshot and strat_key in snapshot[symbol]:
-                        r = snapshot[symbol][strat_key]
-                        perf = {
-                            'trades': r.get('trades'),
-                            'win_rate': r.get('win_rate'),
-                            'total_profit': r.get('total_profit'),
-                            'final_balance': r.get('final_balance'),
-                            'max_drawdown': r.get('max_drawdown'),
-                            'max_drawdown_pct': r.get('max_drawdown_pct'),
-                            'profit_factor': r.get('profit_factor'),
-                            'avg_trade': r.get('avg_trade'),
-                            'expectancy': r.get('expectancy'),
-                            'trade_sharpe': r.get('trade_sharpe')
-                        }
-                except Exception:
-                    perf = None
-                if perf:
-                    entry['performance'] = perf
-
-                # Optimized proposal (same for all symbols) if present
-                if strat_key in optimized_map:
-                    entry['optimized'] = optimized_map[strat_key]
-                entry['updated_at'] = now_ts
-                bestcfg['symbols'][symbol][strat_key] = entry
-
-        # Top-level metadata
+        # Top-level metadata (no more separate 'defaults' section per user request)
         bestcfg['updated_at'] = now_ts
-        bestcfg['defaults'] = {
-            'timeframe': str(tf_input),
-            'timeframe_code': tf_code,
-            'days': int(days_used),
-        }
-        # NEW: defaults for strategy activation (based on current GUI selections)
-        try:
-            bestcfg['defaults']['active_strategies'] = {k: bool(v.get()) for k, v in strat_vars.items()}
-        except Exception:
-            pass
-        # NEW: default HTF filter settings
-        try:
-            def_htf_enabled = bool(use_htf.get())
-        except Exception:
-            def_htf_enabled = False
-        bestcfg['defaults']['htf_filter'] = {
-            'enabled': def_htf_enabled,
-            'timeframe': str(htf_tf_var.get() if 'htf_tf_var' in locals() else 'H1'),
-            'timeframe_code': int(parse_timeframe_input(htf_tf_var.get()) if 'htf_tf_var' in locals() else parse_timeframe_input('H1')),
-            'ma_period': int(parse_int(htf_ma_var.get(), 50) if 'htf_ma_var' in locals() else 50),
-        }
+        # Remove legacy defaults if present
+        if 'defaults' in bestcfg:
+            try:
+                del bestcfg['defaults']
+            except Exception:
+                pass
 
         # Write out
         try:
@@ -1539,11 +1510,13 @@ def gui_main():
     ttk.Button(frm_actions, text="Export Analysis", command=export_analysis).grid(row=0, column=6, padx=6)
     # NEW: Save Best Config for live
     ttk.Button(frm_actions, text="Save Best Config", command=save_best_config).grid(row=0, column=7, padx=6)
+    # NEW: Load Config (single symbol)
+    ttk.Button(frm_actions, text="Load Config", command=lambda: load_symbol_config()).grid(row=0, column=8, padx=6)
     # Move Stop and Quit to the right
     btn_stop_opt = ttk.Button(frm_actions, text="Stop Optimization", command=lambda: opt_state.update(stop=True), state='disabled')
-    btn_stop_opt.grid(row=0, column=8, padx=6)
+    btn_stop_opt.grid(row=0, column=9, padx=6)
     # CHANGED: route Quit through on_close so it saves state consistently
-    ttk.Button(frm_actions, text="Quit", command=on_close).grid(row=0, column=9, padx=6)
+    ttk.Button(frm_actions, text="Quit", command=on_close).grid(row=0, column=10, padx=6)
 
     # Progress bar spans all action columns
     pb = ttk.Progressbar(frm_actions, orient="horizontal", mode="determinate", length=600)
@@ -1582,6 +1555,121 @@ def gui_main():
             lbl_timer.config(text=f"Elapsed: {_fmt_hms(elapsed)}  |  Left: {left_str}")
             # schedule next update
             root.after(250, _tick_timer)
+
+    # =============================
+    # Load symbol config from bestconfig.json (single symbol only)
+    # =============================
+    def load_symbol_config():
+        base_dir = os.path.dirname(__file__)
+        best_path = os.path.join(base_dir, "bestconfig.json")
+        if not os.path.exists(best_path):
+            messagebox.showwarning("Missing", "bestconfig.json not found. Save one first.")
+            return
+        try:
+            with open(best_path, 'r', encoding='utf-8') as f:
+                cfg = json.load(f) or {}
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to read bestconfig.json: {e}")
+            return
+        # Determine symbols in GUI entry
+        symbols_input = collect_symbols()
+        if len(symbols_input) != 1:
+            messagebox.showinfo("Info", "Load Config only works when exactly one symbol is specified.")
+            return
+        symbol = symbols_input[0]
+        sym_node = (cfg.get('symbols') or {}).get(symbol)
+        if not sym_node:
+            messagebox.showwarning("Not Found", f"Symbol '{symbol}' not in bestconfig.json")
+            return
+        # Support new schema meta
+        meta = sym_node.get('_meta', {}) if isinstance(sym_node, dict) else {}
+        # Apply timeframe/days
+        try:
+            tf_val = meta.get('timeframe') or cfg.get('defaults', {}).get('timeframe')
+            if tf_val:
+                tf_var.set(str(tf_val))
+        except Exception:
+            pass
+        try:
+            days_val = meta.get('days') or cfg.get('defaults', {}).get('days')
+            if days_val:
+                days_var.set(str(days_val))
+        except Exception:
+            pass
+        # Risk lots
+        try:
+            lots_val = (meta.get('risk') or {}).get('lots')
+            if lots_val is not None:
+                lots_var.set(str(lots_val))
+        except Exception:
+            pass
+        # Trading window
+        tw = meta.get('trading_window') or {}
+        try:
+            trade_247.set(bool(tw.get('trade_24_7', True)))
+            start_h.set(str(tw.get('start_hour', TRADING_START_HOUR)))
+            end_h.set(str(tw.get('end_hour', TRADING_END_HOUR)))
+        except Exception:
+            pass
+        # HTF Filter
+        htf = meta.get('htf_filter') or {}
+        try:
+            use_htf.set(bool(htf.get('enabled', False)))
+            if htf.get('timeframe'):
+                htf_tf_var.set(str(htf.get('timeframe')))
+            if htf.get('ma_period') is not None:
+                htf_ma_var.set(str(htf.get('ma_period')))
+        except Exception:
+            pass
+        # Strategy activation + params + per-strategy ATR overrides
+        # Clear all strategies to False first then set those present as active flag
+        try:
+            for k, var in strat_vars.items():
+                var.set(False)
+        except Exception:
+            pass
+        for strat_key, strat_data in sym_node.items():
+            if strat_key == '_meta':
+                continue
+            try:
+                # Active flag
+                if strat_key in strat_vars:
+                    strat_vars[strat_key].set(bool(strat_data.get('active', True)))
+                sp = strat_data.get('strategy_params', {}) or {}
+                if strat_key == 'ma_crossover':
+                    if 'fast' in sp: mac_fast.set(str(sp['fast']))
+                    if 'slow' in sp: mac_slow.set(str(sp['slow']))
+                elif strat_key == 'mean_reversion':
+                    if 'ma_period' in sp: mr_ma.set(str(sp['ma_period']))
+                    if 'num_std' in sp: mr_std.set(str(sp['num_std']))
+                elif strat_key == 'momentum_trend':
+                    if 'ma_period' in sp: mom_ma.set(str(sp['ma_period']))
+                    if 'roc_period' in sp: mom_roc.set(str(sp['roc_period']))
+                elif strat_key == 'breakout':
+                    if 'lookback' in sp: brk_lookback.set(str(sp['lookback']))
+                elif strat_key == 'donchian_channel':
+                    if 'channel_length' in sp: brk_lookback.set(str(sp['channel_length']))
+                # ATR overrides (period/sl/tp) if they differ from general defaults store them in per-strategy fields
+                atr = strat_data.get('atr') or {}
+                def _assign_per(v_p, v_sl, v_tp, a):
+                    if a.get('period') is not None: v_p.set(str(a.get('period')))
+                    if a.get('sl_mult') is not None: v_sl.set(str(a.get('sl_mult')))
+                    if a.get('tp_mult') is not None: v_tp.set(str(a.get('tp_mult')))
+                if strat_key == 'ma_crossover':
+                    _assign_per(mac_atr_p, mac_atr_sl, mac_atr_tp, atr)
+                elif strat_key == 'mean_reversion':
+                    _assign_per(mr_atr_p, mr_atr_sl, mr_atr_tp, atr)
+                elif strat_key == 'momentum_trend':
+                    _assign_per(mom_atr_p, mom_atr_sl, mom_atr_tp, atr)
+                elif strat_key == 'breakout':
+                    _assign_per(brk_atr_p, brk_atr_sl, brk_atr_tp, atr)
+                elif strat_key == 'donchian_channel':
+                    _assign_per(don_atr_p, don_atr_sl, don_atr_tp, atr)
+            except Exception:
+                continue
+        # Persist GUI state after loading
+        save_last_params(collect_gui_state())
+        append_line(f"Loaded config for {symbol}", 'info')
 
     root.protocol("WM_DELETE_WINDOW", on_close)
     root.mainloop()

@@ -443,22 +443,14 @@ def launch_gui():
         frm = ttk.Frame(notebook, padding=8)
         notebook.add(frm, text=symbol)
 
-        # Defaults for initial UI state
         sym_cfg = (cfg.get('symbols', {}).get(symbol, {}) or {})
-        def_h = (cfg.get('defaults', {}) or {})
-        def_htf = (def_h.get('htf_filter', {}) or {})
+        sym_meta = sym_cfg.get('_meta', {}) if isinstance(sym_cfg, dict) else {}
+        def_htf = (sym_meta.get('htf_filter', {}) or {})
 
         active = tk.BooleanVar(value=True)
-        tf_str = tk.StringVar(value=str(def_h.get('timeframe', 'M15')))
+        tf_str = tk.StringVar(value=str(sym_meta.get('timeframe', 'M15')))
         bars_var = tk.StringVar(value=str(400))
-        # initial lots guess: 0.1 or try to read first strategy
-        init_lots = 0.1
-        try:
-            for sk, cent in sym_cfg.items():
-                init_lots = float((cent.get('risk', {}) or {}).get('lots', init_lots))
-                break
-        except Exception:
-            pass
+        init_lots = float((sym_meta.get('risk') or {}).get('lots', 0.1))
         lots_var = tk.StringVar(value=str(init_lots))
         tw_247 = tk.BooleanVar(value=True)
         tw_start = tk.StringVar(value="0")
@@ -467,7 +459,6 @@ def launch_gui():
         htf_tf = tk.StringVar(value=str(def_htf.get('timeframe', 'H1')))
         htf_ma = tk.StringVar(value=str(def_htf.get('ma_period', 50)))
 
-        # Strategies (UI defaults). We default to disabled unless bestconfig provides an active flag.
         strat_defs = {
             'ma_crossover': {'enabled': False, 'params': {'fast': '5', 'slow': '20'}},
             'mean_reversion': {'enabled': False, 'params': {'ma_period': '10', 'num_std': '1'}},
@@ -514,12 +505,10 @@ def launch_gui():
         ttk.Label(tbl, text="Params").grid(row=rr, column=2)
         ttk.Label(tbl, text="ATR (period, SLx, TPx, prio)").grid(row=rr, column=3)
         rr += 1
-
         for sk, d in strat_defs.items():
             cent = sym_cfg.get(sk, {}) or {}
             params = cent.get('strategy_params', d['params'])
             atr = cent.get('atr', def_atr)
-            # Enabled: respect bestconfig 'active' flag; if missing in cfg, default to False
             en = tk.BooleanVar(value=bool(cent.get('active', False)) if cent else bool(d['enabled']))
             svars.setdefault(sk, {})
             svars[sk]['enabled'] = en
@@ -566,11 +555,9 @@ def launch_gui():
             ttk.Entry(atr_frm, width=4, textvariable=av_pr).pack(side=tk.LEFT, padx=2)
             rr += 1
 
-        # Live Stats table
         row += 1
         stats_box = ttk.LabelFrame(frm, text="Live Stats (per strategy)", padding=6)
         stats_box.grid(row=row, column=0, columnspan=7, sticky='nsew', pady=6)
-        # Make the stats box expandable
         frm.rowconfigure(row, weight=1)
         frm.columnconfigure(0, weight=1)
         cols = ('Strategy', 'Side', 'Volume', 'Avg Price', 'Unrealized P/L', 'Positions')
@@ -606,40 +593,32 @@ def launch_gui():
             pass
 
     def sync_symbol_from_cfg(symbol, cfg_snapshot):
-        # Ensure tab exists
         if symbol not in ui:
             build_symbol_tab(symbol)
         sv = ui[symbol]
         sym_cfg = (cfg_snapshot.get('symbols', {}).get(symbol, {}) or {})
-        defaults = (cfg_snapshot.get('defaults', {}) or {})
-        dhtf = (defaults.get('htf_filter', {}) or {})
+        sym_meta = sym_cfg.get('_meta', {}) if isinstance(sym_cfg, dict) else {}
+        dhtf = (sym_meta.get('htf_filter', {}) or {})
 
         # active: keep as-is (user control)
-        # timeframe from defaults if present
-        tf_code = defaults.get('timeframe_code') or defaults.get('timeframe')
+        # timeframe from symbol meta
+        tf_code = sym_meta.get('timeframe_code') or sym_meta.get('timeframe')
         if tf_code is not None:
             try:
                 sv['tf_str'].set(timeframe_code_to_str(int(tf_code)))
             except Exception:
                 pass
         # bars: keep current
-        # lots/trading_window: derive from first available strategy entry
-        lot_val = None
-        tw = None
-        for sk, cent in sym_cfg.items():
-            try:
-                lot_val = float((cent.get('risk', {}) or {}).get('lots'))
-                tw = cent.get('trading_window')
-                if lot_val is not None:
-                    break
-            except Exception:
-                continue
-        if lot_val is not None:
-            sv['lots'].set(str(lot_val))
-        if isinstance(tw, dict):
-            sv['tw_247'].set(bool(tw.get('trade_24_7', True)))
-            sv['tw_start'].set(str(int(tw.get('start_hour', 0))))
-            sv['tw_end'].set(str(int(tw.get('end_hour', 24))))
+        # lots & trading window from symbol meta
+        try:
+            lots_val = float((sym_meta.get('risk') or {}).get('lots'))
+            sv['lots'].set(str(lots_val))
+        except Exception:
+            pass
+        tw = sym_meta.get('trading_window', {}) or {}
+        sv['tw_247'].set(bool(tw.get('trade_24_7', True)))
+        sv['tw_start'].set(str(int(tw.get('start_hour', 0))))
+        sv['tw_end'].set(str(int(tw.get('end_hour', 24))))
 
         # HTF
         sv['htf_enabled'].set(bool(dhtf.get('enabled', False)))
@@ -652,7 +631,7 @@ def launch_gui():
                 sv['htf_tf'].set(str(dhtf.get('timeframe')))
         sv['htf_ma'].set(str(int(dhtf.get('ma_period', 50))))
 
-    # Strategies: update enabled, params, ATR. Respect bestconfig 'active' flag; do not auto-enable missing entries.
+        # Strategies: update enabled, params, ATR. Respect bestconfig 'active' flag; do not auto-enable missing entries.
         def set_entry(ent: tk.Entry, text: str):
             try:
                 ent.delete(0, tk.END)
@@ -661,7 +640,6 @@ def launch_gui():
                 pass
         for sk, d in (sv['strats'] or {}).items():
             cent = sym_cfg.get(sk, {}) or {}
-            # Enabled strictly from bestconfig if present; else disable
             d.get('enabled').set(bool(cent.get('active', False)) if cent else False)
             params = cent.get('strategy_params', {}) or {}
             atr = cent.get('atr', {}) or {}
@@ -681,7 +659,6 @@ def launch_gui():
                 key = 'lookback' if sk == 'breakout' else 'channel_length'
                 d['p_len'].set(str(int(params.get(key, d['p_len'].get() or 20))))
                 set_entry(d['params_ent'], f"{key}={d['p_len'].get()}")
-            # ATR
             d['atr_p'].set(str(int(atr.get('period', d['atr_p'].get() or 21))))
             d['atr_sl'].set(str(float(atr.get('sl_mult', d['atr_sl'].get() or 1.5))))
             d['atr_tp'].set(str(float(atr.get('tp_mult', d['atr_tp'].get() or 2.5))))

@@ -17,6 +17,28 @@ Typical usage:
         lots = params.get("risk", {}).get("lots", 0.1)
         # Use strat_params to configure your live agent
         # Use atr settings to set SL/TP logic if desired
+SCHEMA NOTES (2025-10-08):
+Two supported schema variants for bestconfig.json:
+
+1. Legacy (per-strategy duplication):
+   symbols: {
+       "XAUUSD": {
+           "ma_crossover": { timeframe, timeframe_code, days, risk, trading_window, htf_filter, strategy_params, atr, ... },
+           "mean_reversion": { ... },
+           ...
+       }
+   }
+
+2. Current (de-duplicated symbol meta):
+   symbols: {
+       "XAUUSD": {
+           "_meta": { timeframe, timeframe_code, days, risk, trading_window, htf_filter },
+           "ma_crossover": { strategy_params, atr, performance, optimized, active, updated_at },
+           "mean_reversion": { ... }
+       }
+   }
+
+get_params_for() merges _meta into each strategy dict on access for a backward compatible consumer API.
 """
 from __future__ import annotations
 import json
@@ -62,7 +84,7 @@ def load_bestconfig(path: Optional[str] = None) -> Dict[str, Any]:
 
 
 def get_symbol_config(cfg: Dict[str, Any], symbol: str) -> Dict[str, Any]:
-    """Return the config entry for a given symbol, or empty dict."""
+    """Return the raw symbol node (contains strategies + optional _meta) or empty dict."""
     try:
         return (cfg or {}).get("symbols", {}).get(symbol, {}) or {}
     except Exception:
@@ -70,27 +92,30 @@ def get_symbol_config(cfg: Dict[str, Any], symbol: str) -> Dict[str, Any]:
 
 
 def get_params_for(cfg: Dict[str, Any], symbol: str, strategy: str) -> Optional[Dict[str, Any]]:
-    """Return merged parameters for a symbol+strategy or None if missing.
+    """Return merged parameters for a symbol+strategy.
 
-    Structure:
-    {
-      'strategy_params': {...},
-      'atr': {'period': int, 'sl_mult': float, 'tp_mult': float, 'priority': str},
-      'trading_window': {'trade_24_7': bool, 'start_hour': int, 'end_hour': int},
-      'risk': {'lots': float},
-      'timeframe': str,              # e.g., '15M' or MT5 numeric
-      'timeframe_code': int,         # MT5 timeframe code
-      'days': int,
-      'performance': {...},          # optional, if present in file
-      'optimized': {...},            # optional, if present in file
-      'updated_at': str
-    }
+    Backward & forward compatible with two schema variants:
+
+    Old schema (per-strategy duplication):
+        symbols: { SYMBOL: { STRATEGY: { timeframe, timeframe_code, days, risk, trading_window, htf_filter, ... } } }
+
+    New schema (2025-10-08):
+        symbols: { SYMBOL: { '_meta': { timeframe, timeframe_code, days, risk, trading_window, htf_filter }, STRATEGY: { strategy_params, atr, ... } } }
+
+    Merge precedence: strategy-level keys override symbol-level meta if collision occurs.
     """
     try:
-        sym = get_symbol_config(cfg, symbol)
-        if strategy not in sym:
+        sym_node = get_symbol_config(cfg, symbol)
+        if not sym_node or strategy not in sym_node:
             return None
-        return sym[strategy]
+        strat_node = dict(sym_node[strategy])  # shallow copy
+        meta = sym_node.get('_meta')
+        if meta and isinstance(meta, dict):
+            # Only add meta keys that are not already present to keep explicit strategy overrides
+            for k, v in meta.items():
+                if k not in strat_node:
+                    strat_node[k] = v
+        return strat_node
     except Exception:
         return None
 
@@ -105,10 +130,12 @@ def available_symbols(cfg: Dict[str, Any]) -> list[str]:
 def available_strategies(cfg: Dict[str, Any], symbol: str, active_only: bool = False) -> list[str]:
     try:
         sym = get_symbol_config(cfg, symbol)
+        # Exclude _meta container from strategy listing
+        strategies = {k: v for k, v in sym.items() if k != '_meta'}
         if not active_only:
-            return sorted(list(sym.keys()))
+            return sorted(list(strategies.keys()))
         actives = []
-        for k, v in sym.items():
+        for k, v in strategies.items():
             try:
                 if bool((v or {}).get('active', True)):
                     actives.append(k)
