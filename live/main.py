@@ -146,6 +146,42 @@ def compute_atr(df: pd.DataFrame, period: int = ATR_PERIOD):
         return None
 
 
+def compute_htf_bias_scalar(symbol: str, htf_code: int, ma_p: int) -> int | None:
+    """
+    Returns -1, 0, 1 using the last COMPLETED HTF bar relative to its MA(ma_p).
+    None if insufficient HTF history.
+    """
+    try:
+        # Pull enough HTF bars; fallback to time range based on now
+        now = datetime.now()
+        # rough window to ensure enough bars for MA + some margin
+        est_minutes = 1440 if htf_code == mt5.TIMEFRAME_D1 else 240 if htf_code == mt5.TIMEFRAME_H4 else 60
+        from_dt = now - timedelta(minutes=est_minutes * (ma_p + 5))
+        rates_htf = mt5.copy_rates_range(symbol, htf_code, from_dt, now)
+        if rates_htf is None or len(rates_htf) < ma_p + 1:
+            return None
+        dfh = pd.DataFrame(rates_htf)
+        dfh['time'] = pd.to_datetime(dfh['time'], unit='s')
+
+        # Drop the last (potentially incomplete) HTF bar
+        if len(dfh) >= 2:
+            dfh = dfh.iloc[:-1]
+
+        if len(dfh) < ma_p:
+            return None
+
+        dfh['ma'] = dfh['close'].rolling(ma_p).mean()
+        last_ma = dfh['ma'].iloc[-1]
+        last_close = dfh['close'].iloc[-1]
+        if pd.isna(last_ma):
+            return None
+        b = np.sign(last_close - last_ma)
+        # Cast to int -1/0/1
+        return int(b) if not pd.isna(b) else None
+    except Exception:
+        return None
+
+
 def send_order(symbol, signal, lot=None, deviation=5, comment="", atr: float | None = None, magic: int | None = None):
     # Fetch symbol details and tick once
     symbol_info = mt5.symbol_info(symbol)

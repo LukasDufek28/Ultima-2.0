@@ -40,6 +40,8 @@ class LiveController:
         self.last_run_ts = None
         # Live stats cache: {symbol: {strategy: { 'buy': {...}, 'sell': {...} } } }
         self.stats = {}
+        # Latest HTF bias per symbol: {symbol: -1|0|1|None}
+        self.htf_bias = {}
 
     def _log(self, msg):
         if self.status_cb:
@@ -59,22 +61,31 @@ class LiveController:
 
     def _compute_bias(self, symbol, df, htf_code, ma_p):
         try:
-            from_date = _to_py_dt(df['time'].iloc[0])
-            to_date = _to_py_dt(df['time'].iloc[-1])
-            rates_htf = mt5.copy_rates_range(symbol, htf_code, from_date, to_date)
-            if rates_htf is None or len(rates_htf) == 0:
-                return None
-            dfh = pd.DataFrame(rates_htf)
-            dfh['time'] = pd.to_datetime(dfh['time'], unit='s')
-            dfh['ma'] = dfh['close'].rolling(ma_p).mean()
-            dfh['bias'] = np.sign(dfh['close'] - dfh['ma'])
-            merged = pd.merge_asof(
-                df[['time']],
-                dfh[['time', 'bias']].dropna(subset=['time']),
-                on='time',
-                direction='backward'
-            )
-            return merged['bias']
+            # Fetch enough HTF history independent of LTF window so MA has data
+            now = datetime.now()
+            minutes_per_bar = timeframe_to_minutes(int(htf_code))
+            # Try progressively larger lookbacks until we have >= ma_p bars (completed)
+            for mult in (2, 4, 8):
+                lookback_bars = max(ma_p + 5, ma_p * mult)
+                from_date = now - timedelta(minutes=lookback_bars * minutes_per_bar)
+                rates_htf = mt5.copy_rates_range(symbol, int(htf_code), from_date, now)
+                if rates_htf is None or len(rates_htf) == 0:
+                    continue
+                dfh = pd.DataFrame(rates_htf)
+                dfh['time'] = pd.to_datetime(dfh['time'], unit='s')
+                # Drop the most recent (possibly in-progress) bar
+                if len(dfh) >= 2:
+                    dfh = dfh.iloc[:-1]
+                if len(dfh) < ma_p:
+                    continue
+                dfh['ma'] = dfh['close'].rolling(ma_p).mean()
+                last_ma = dfh['ma'].iloc[-1]
+                last_close = dfh['close'].iloc[-1]
+                if pd.isna(last_ma):
+                    continue
+                b = np.sign(last_close - last_ma)
+                return int(b) if not pd.isna(b) else None
+            return None
         except Exception:
             return None
 
@@ -131,11 +142,17 @@ class LiveController:
                         df = pd.DataFrame(rates)
                         df['time'] = pd.to_datetime(df['time'], unit='s')
 
-                        # HTF bias
+                        # HTF bias (single scalar -1/0/1 using completed bar)
                         htf = conf.get('htf_filter', {}) or {}
-                        bias_series = None
+                        scalar_bias = None
                         if bool(htf.get('enabled', False)):
-                            bias_series = self._compute_bias(symbol, df, int(htf.get('timeframe_code', mt5.TIMEFRAME_H1)), int(htf.get('ma_period', 50)))
+                            scalar_bias = self._compute_bias(symbol, df, int(htf.get('timeframe_code', mt5.TIMEFRAME_H1)), int(htf.get('ma_period', 50)))
+                        with self.lock:
+                            self.htf_bias[symbol] = scalar_bias
+                        try:
+                            self._log(f"{symbol} HTF bias: {scalar_bias if scalar_bias is not None else 'None'}")
+                        except Exception:
+                            pass
 
                         # Trading window config
                         tw = conf.get('trading_window', {}) or {}
@@ -159,16 +176,11 @@ class LiveController:
                                 continue
 
                             signal = agent.get_signal(df)
-                            if bias_series is not None and signal in ('buy', 'sell'):
-                                try:
-                                    b = float(bias_series.iloc[-1])
-                                except Exception:
-                                    b = None
-                                if b is not None:
-                                    if signal == 'buy' and b <= 0:
-                                        signal = None
-                                    elif signal == 'sell' and b >= 0:
-                                        signal = None
+                            if scalar_bias is not None and signal in ('buy', 'sell'):
+                                if signal == 'buy' and scalar_bias <= 0:
+                                    signal = None
+                                elif signal == 'sell' and scalar_bias >= 0:
+                                    signal = None
                             self._log(f"{symbol} {strat_key}: {signal}")
 
                             # Compute magic for stats and order management
@@ -501,6 +513,10 @@ def launch_gui(preloaded_cfg: dict | None = None):
         ttk.Entry(box2, textvariable=htf_tf, width=6).grid(row=0, column=2)
         ttk.Label(box2, text="MA").grid(row=0, column=3)
         ttk.Entry(box2, textvariable=htf_ma, width=6).grid(row=0, column=4)
+        # Bias display (colored)
+        ttk.Label(box2, text="Bias").grid(row=0, column=5, padx=(8,2))
+        bias_lbl = tk.Label(box2, text="—", width=8, relief=tk.SOLID, bd=1)
+        bias_lbl.grid(row=0, column=6, sticky='w')
         row += 1
 
         tbl = ttk.LabelFrame(frm, text="Strategies", padding=6)
@@ -585,6 +601,7 @@ def launch_gui(preloaded_cfg: dict | None = None):
             'htf_enabled': htf_enabled,
             'htf_tf': htf_tf,
             'htf_ma': htf_ma,
+            'htf_bias_lbl': bias_lbl,
             'strats': svars,
             'stats_tree': tree,
         }
@@ -799,6 +816,30 @@ def launch_gui(preloaded_cfg: dict | None = None):
                         avgp = e.get('avg_price', 0.0)
                         upl = e.get('unrealized_pl', 0.0)
                         tree.insert('', tk.END, values=(strat, side.upper(), f"{vol:.2f}", f"{avgp:.5f}", f"{upl:.2f}", int(e.get('positions', 0))))
+        except Exception:
+            pass
+        # HTF Bias labels refresh
+        try:
+            with ctl.lock:
+                bias_snapshot = dict(getattr(ctl, 'htf_bias', {}) or {})
+            for symbol, sv in ui.items():
+                lbl = sv.get('htf_bias_lbl')
+                if not lbl:
+                    continue
+                # Show OFF if user disabled HTF filter
+                if not bool(sv.get('htf_enabled').get()):
+                    lbl.config(text='OFF', bg='#3a3a3a', fg='#bbbbbb')
+                    continue
+                b = bias_snapshot.get(symbol, None)
+                if b is None:
+                    lbl.config(text='—', bg='#444444', fg='#dddddd')
+                else:
+                    if b > 0:
+                        lbl.config(text='UP', bg='#1f6f43', fg='white')
+                    elif b < 0:
+                        lbl.config(text='DOWN', bg='#8b1e1e', fg='white')
+                    else:
+                        lbl.config(text='FLAT', bg='#555555', fg='#eeeeee')
         except Exception:
             pass
         root.after(1000, update_countdown_and_stats)

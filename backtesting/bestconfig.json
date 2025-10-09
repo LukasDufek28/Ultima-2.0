@@ -171,7 +171,100 @@
         "active": false,
         "updated_at": "2025-10-08 23:19:53"
       }
+    },
+    "GBPJPY": {
+      "_meta": {
+        "timeframe": "1H",
+        "timeframe_code": 16385,
+        "days": 300,
+        "risk": {
+          "lots": 0.1
+        },
+        "trading_window": {
+          "trade_24_7": false,
+          "start_hour": 7,
+          "end_hour": 15
+        },
+        "htf_filter": {
+          "enabled": true,
+          "timeframe": "D1",
+          "timeframe_code": 16408,
+          "ma_period": 100
+        }
+      },
+      "ma_crossover": {
+        "strategy_params": {
+          "fast": 5,
+          "slow": 50
+        },
+        "atr": {
+          "period": 14,
+          "sl_mult": 1.5,
+          "tp_mult": 2.0,
+          "priority": "SL"
+        },
+        "active": false,
+        "updated_at": "2025-10-09 10:09:41"
+      },
+      "mean_reversion": {
+        "strategy_params": {
+          "ma_period": 100,
+          "num_std": 2
+        },
+        "atr": {
+          "period": 21,
+          "sl_mult": 3.0,
+          "tp_mult": 1.0,
+          "priority": "SL"
+        },
+        "active": true,
+        "updated_at": "2025-10-09 10:09:41"
+      },
+      "momentum_trend": {
+        "strategy_params": {
+          "ma_period": 20,
+          "roc_period": 10
+        },
+        "atr": {
+          "period": 7,
+          "sl_mult": 1.0,
+          "tp_mult": 2.5,
+          "priority": "SL"
+        },
+        "active": false,
+        "updated_at": "2025-10-09 10:09:41"
+      },
+      "breakout": {
+        "strategy_params": {
+          "lookback": 50
+        },
+        "atr": {
+          "period": 14,
+          "sl_mult": 2.5,
+          "tp_mult": 1.0,
+          "priority": "SL"
+        },
+        "active": true,
+        "updated_at": "2025-10-09 10:09:41"
+      },
+      "donchian_channel": {
+        "strategy_params": {
+          "channel_length": 50,
+          "exit_length": 100,
+          "confirm_bars": 2,
+          "atr_buffer_mult": 0.5,
+          "atr_period": 14
+        },
+        "atr": {
+          "period": 14,
+          "sl_mult": 2.5,
+          "tp_mult": 1.0,
+          "priority": "SL"
+        },
+        "active": true,
+        "updated_at": "2025-10-09 10:09:41"
+      }
     }
   },
-  "updated_at": "2025-10-08 23:24:36"
+  "updated_at": "2025-10-09 10:09:41"
 }
